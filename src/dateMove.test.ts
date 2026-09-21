@@ -1,0 +1,5 @@
+import { describe, expect, it } from 'vitest'
+import { moveEventDate, restoreEventDate } from './dateMove'
+import type { Entry } from './types'
+const entry:Entry={id:'same-id',title:'A',body:'',entryType:'memory',eventDate:{precision:'year',start:'2004-01-01',confidence:'approximate'},recordTime:'r',createdAt:'c',updatedAt:'u',importance:1,status:'active',peopleIds:['p'],placeIds:[],tagIds:[],mediaIds:[],relatedEntryIds:[]}
+describe('date movement',()=>{it('preserves identity and year precision',()=>{const moved=moveEventDate(entry,{start:'2007-01-01'});expect(moved.id).toBe('same-id');expect(moved.createdAt).toBe('c');expect(moved.eventDate).toMatchObject({precision:'year',confidence:'approximate',start:'2007-01-01'})});it('undo restores complete uncertain metadata',()=>{const prior={precision:'season' as const,start:'2008-06-01',season:'Summer' as const,confidence:'likely' as const};expect(restoreEventDate(moveEventDate(entry,{precision:'exact',start:'2010-01-01'}),prior).eventDate).toEqual(prior)})})
