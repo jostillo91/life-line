@@ -1,0 +1,67 @@
+name: Deploy Life Line frontend to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v6
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Audit repository publication safety
+        run: pnpm audit:deployment --repo-only
+      - name: Run complete test suite
+        run: pnpm test
+      - name: Read existing Pages configuration
+        id: pages
+        uses: actions/configure-pages@v5
+      - name: Build frontend only for the Pages path
+        run: pnpm build:pages
+        env:
+          LIFE_LINE_BASE_PATH: ${{ steps.pages.outputs.base_path || '/' }}
+      - name: Validate production PWA and asset paths
+        run: pnpm check:pwa
+        env:
+          LIFE_LINE_BASE_PATH: ${{ steps.pages.outputs.base_path || '/' }}
+      - name: Audit static deployment artifact
+        run: pnpm audit:deployment --bundle-only
+      - name: Upload static frontend only
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

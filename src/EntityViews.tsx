@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { db, removeEntity } from './db'
 import { referencesFor } from './domain'
 import { EntityManager } from './EntityManager'
+import { PlaceSuggestions } from './PlaceSuggestions'
+import type { Coordinates } from './locationDomain'
 import type { Archive, LifeEra, Person, Place, Tag } from './types'
 
 export type EntityViewName = 'people' | 'places' | 'tags' | 'eras'
@@ -9,9 +12,12 @@ type Props = {
   data: Archive
   onChanged: () => Promise<void>
   onOpenEntries: (field: 'peopleIds' | 'placeIds' | 'tagIds', id: string) => void
+  onViewOnMap?: (place: Place) => void
+  onViewCluster?: (coordinates: Coordinates) => void
+  focusedPlace?: { id: string; nonce: number }
 }
 
-function EntityView({ kind, data, onChanged, onOpenEntries }: Props & { kind: EntityViewName }) {
+function EntityView({ kind, data, onChanged, onOpenEntries, onPlaceSuggestions, onViewOnMap, focusedPlace }: Props & { kind: EntityViewName; onPlaceSuggestions?: () => void }) {
   async function saveEntity(entityKind: EntityViewName, item: Entity) {
     await db.table(entityKind).put(item)
     await onChanged()
@@ -26,12 +32,13 @@ function EntityView({ kind, data, onChanged, onOpenEntries }: Props & { kind: En
           ? 'tagIds'
           : null
     const count = field ? referencesFor(data.entries, field, item.id).length : 0
-    if (count && !confirm(`This removes ${item.name} from ${count} memories. The memories stay safe. Continue?`)) return
+    const mediaCount = entityKind === 'places' ? (data.media ?? []).filter(media => media.placeId === item.id).length : 0
+    if ((count || mediaCount) && !confirm(`This removes ${item.name} from ${count} memories and ${mediaCount} media items. The memories and files stay safe. Continue?`)) return
     await removeEntity(entityKind, item.id)
     await onChanged()
   }
 
-  return <EntityManager kind={kind} data={data} onSave={saveEntity} onDelete={deleteEntity} onOpenEntries={onOpenEntries} />
+  return <EntityManager kind={kind} data={data} onSave={saveEntity} onDelete={deleteEntity} onOpenEntries={onOpenEntries} onPlaceSuggestions={onPlaceSuggestions} onViewOnMap={onViewOnMap} focusedPlace={focusedPlace} />
 }
 
 export function PeopleView(props: Props) {
@@ -39,7 +46,11 @@ export function PeopleView(props: Props) {
 }
 
 export function PlacesView(props: Props) {
-  return <EntityView kind="places" {...props} />
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false)
+  return <>
+    <EntityView kind="places" {...props} onPlaceSuggestions={() => setSuggestionsOpen(true)}/>
+    {suggestionsOpen && <PlaceSuggestions media={props.data.media ?? []} places={props.data.places} onChanged={props.onChanged} onClose={() => setSuggestionsOpen(false)} onViewCluster={props.onViewCluster}/>}
+  </>
 }
 
 export function TagsView(props: Props) {

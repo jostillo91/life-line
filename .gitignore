@@ -3,3 +3,14 @@ dist/
 .sites-runtime/
 *.local
 *.log
+.env
+.env.*
+!**/.env.example
+*.zip
+*.encrypted
+life-line-archive*.json
+backups/
+exports/
+archive-exports/
+*.pem
+*.key

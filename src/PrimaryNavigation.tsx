@@ -1,12 +1,16 @@
-export type View = 'timeline' | 'unsorted' | 'people' | 'places' | 'tags' | 'eras'
+export type View = 'timeline' | 'search' | 'unsorted' | 'people' | 'places' | 'tags' | 'eras' | 'media' | 'map' | 'data'
 
 const items: Array<[View, string]> = [
   ['timeline', 'Timeline'],
+  ['search', 'Search'],
   ['unsorted', 'Unsorted Memories'],
   ['people', 'People'],
   ['places', 'Places'],
   ['tags', 'Tags'],
   ['eras', 'Life Eras'],
+  ['media', 'Media Library'],
+  ['map', 'Life Map'],
+  ['data', 'Backup & Restore'],
 ]
 
 export function PrimaryNavigation({ currentView, onViewChange }: {
